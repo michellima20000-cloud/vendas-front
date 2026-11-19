@@ -1,0 +1,121 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-playfair: "Playfair Display", Georgia, "Times New Roman", serif;
+  --font-nunito: "Nunito", "Segoe UI", Arial, sans-serif;
+  --background: #fffafb;
+  --foreground: #2b2024;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  color: var(--foreground);
+  background:
+    radial-gradient(circle at 0% 0%, rgba(244, 163, 186, 0.14), transparent 30rem),
+    var(--background);
+  font-family: var(--font-nunito);
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  color: #2b2024;
+  background: #f8cbd7;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid rgba(176, 122, 133, 0.35);
+  outline-offset: 2px;
+}
+
+@layer components {
+  .container-page {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+
+  .font-display {
+    font-family: var(--font-playfair);
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-pill bg-primary px-6 py-3 text-sm font-bold text-white shadow-card transition hover:-translate-y-0.5 hover:bg-primary-hover hover:shadow-card-hover disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-pill border border-primary/20 bg-white px-6 py-3 text-sm font-bold text-primary transition hover:border-primary/40 hover:bg-primary-light;
+  }
+
+  .card {
+    @apply rounded-card border border-primary/10 bg-white shadow-card;
+  }
+
+  .field {
+    @apply w-full rounded-2xl border border-primary/15 bg-white px-4 py-3 text-sm text-text-title outline-none transition placeholder:text-text-secondary/70 focus:border-primary focus:ring-4 focus:ring-primary/10;
+  }
+
+  .field-label {
+    @apply mb-2 block text-sm font-bold text-text-title;
+  }
+
+  .section-title {
+    @apply font-display text-3xl font-bold text-text-title sm:text-4xl;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.45s ease-out both;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: #f8edf0;
+}
+
+.skeleton::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+  animation: shimmer 1.5s infinite;
+}
