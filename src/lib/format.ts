@@ -25,6 +25,9 @@ export function slugify(value: string): string {
 export function whatsappUrl(number?: string | null, message?: string): string {
   if (!number) return "#";
   const digits = number.replace(/\D/g, "");
+  // Accept numbers with or without the 55 country code.
+  const withCountry =
+    digits.startsWith("55") && digits.length >= 12 ? digits : `55${digits}`;
   const text = message ? `?text=${encodeURIComponent(message)}` : "";
-  return `https://wa.me/55${digits}${text}`;
+  return `https://wa.me/${withCountry}${text}`;
 }

@@ -12,6 +12,7 @@ import {
   Settings,
   ShoppingBag,
   Store,
+  Tags,
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -20,6 +21,7 @@ import { cn } from "@/lib/cn";
 const navigation = [
   { href: "/painel", label: "Visão geral", icon: LayoutDashboard },
   { href: "/painel/produtos", label: "Produtos", icon: Package },
+  { href: "/painel/categorias", label: "Categorias", icon: Tags },
   { href: "/painel/pedidos", label: "Pedidos", icon: ShoppingBag },
   { href: "/painel/configuracoes", label: "Configurações", icon: Settings },
 ];

@@ -154,6 +154,36 @@ export const api = {
   },
   getStoreCategories: (token: string) =>
     apiRequest<Category[]>(`/products/mine/categories`, { token }),
+  createCategory: (token: string, data: { name: string; slug?: string }) =>
+    apiRequest<Category>("/products/mine/categories", {
+      method: "POST",
+      body: JSON.stringify(data),
+      token,
+    }),
+  updateCategory: (
+    token: string,
+    id: string,
+    data: { name?: string; slug?: string },
+  ) =>
+    apiRequest<Category>(`/products/mine/categories/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+      token,
+    }),
+  deleteCategory: (token: string, id: string) =>
+    apiRequest<Category>(`/products/mine/categories/${id}`, {
+      method: "DELETE",
+      token,
+    }),
+  uploadImages: (token: string, files: File[]) => {
+    const formData = new FormData();
+    files.forEach((file) => formData.append("files", file));
+    return apiRequest<{ urls: string[] }>("/uploads/images", {
+      method: "POST",
+      body: formData,
+      token,
+    });
+  },
   getStoreOrders: (token: string, page = 1, limit = 20) =>
     apiRequest<Paginated<Order>>(`/orders/store?page=${page}&limit=${limit}`, {
       token,

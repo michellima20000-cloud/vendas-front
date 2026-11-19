@@ -36,7 +36,9 @@ export function CartDrawer() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [orderId, setOrderId] = useState("");
+  const [orderTotal, setOrderTotal] = useState<number | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("PIX");
+  const [coupon, setCoupon] = useState("");
 
   if (!isOpen) return null;
 
@@ -72,8 +74,10 @@ export function CartDrawer() {
         paymentMethod,
         address,
         notes,
+        couponCode: coupon.trim() || undefined,
       });
       setOrderId(order.id);
+      setOrderTotal(order.total);
       clearCart();
     } catch (requestError) {
       const message =
@@ -91,6 +95,8 @@ export function CartDrawer() {
     window.setTimeout(() => {
       setCheckoutOpen(false);
       setOrderId("");
+      setOrderTotal(null);
+      setCoupon("");
       setError("");
     }, 200);
   }
@@ -131,6 +137,11 @@ export function CartDrawer() {
             <p className="mt-2 text-sm leading-relaxed text-text-secondary">
               Seu pedido <strong className="text-text-title">#{orderId.slice(-8).toUpperCase()}</strong> foi registrado. A loja já pode acompanhar o pedido.
             </p>
+            {orderTotal !== null && (
+              <p className="mt-3 font-display text-xl font-bold text-primary">
+                Total: {formatCurrency(orderTotal)}
+              </p>
+            )}
             <button type="button" onClick={closePanel} className="btn-primary mt-7 w-full">
               Continuar comprando
             </button>
@@ -316,6 +327,18 @@ export function CartDrawer() {
                   <input name="zipCode" required className="field" placeholder="00000-000" />
                 </label>
               </div>
+              <label>
+                <span className="field-label">Cupom de desconto (opcional)</span>
+                <input
+                  value={coupon}
+                  onChange={(event) => setCoupon(event.target.value)}
+                  className="field uppercase"
+                  placeholder="PRIMEIRACOMPRA"
+                />
+                <span className="mt-1.5 block text-xs text-text-secondary">
+                  O desconto é calculado ao confirmar o pedido.
+                </span>
+              </label>
               <label>
                 <span className="field-label">Observações (opcional)</span>
                 <textarea name="notes" rows={3} className="field resize-none" placeholder="Horário preferencial, ponto de referência..." />

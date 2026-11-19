@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, type FormEvent, useEffect } from "react";
-import { LoaderCircle, X, ImagePlus, Trash2 } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
+import Link from "next/link";
+import { ImagePlus, LoaderCircle, Plus, Trash2, X } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { api, ApiError } from "@/lib/api";
-import type { Product, Category } from "@/types/api";
+import type { Category, Product } from "@/types/api";
 
 interface ProductFormDialogProps {
   isOpen: boolean;
@@ -13,81 +14,118 @@ interface ProductFormDialogProps {
   product?: Product | null;
 }
 
-export function ProductFormDialog({ isOpen, onClose, onSuccess, product }: ProductFormDialogProps) {
+interface ImageItem {
+  id: string;
+  url: string;
+  file?: File;
+}
+
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+
+const emptyForm = {
+  name: "",
+  description: "",
+  price: "",
+  comparePrice: "",
+  stock: "",
+  installments: "",
+  categoryId: "",
+  isActive: true,
+};
+
+export function ProductFormDialog({
+  isOpen,
+  onClose,
+  onSuccess,
+  product,
+}: ProductFormDialogProps) {
   const { token } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [images, setImages] = useState<string[]>([]);
-  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [images, setImages] = useState<ImageItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    price: "",
-    comparePrice: "",
-    stock: "",
-    installments: "",
-    categoryId: "",
-    isActive: true,
-  });
+  const [formData, setFormData] = useState(emptyForm);
+  const [showCategoryForm, setShowCategoryForm] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
 
   useEffect(() => {
-    if (token) {
-      api.getStoreCategories(token).then(setCategories).catch(console.error);
-    }
-  }, [token]);
+    if (!token || !isOpen) return;
+    api
+      .getStoreCategories(token)
+      .then(setCategories)
+      .catch(() => {
+        /* categorias são opcionais no formulário */
+      });
+  }, [isOpen, token]);
 
   useEffect(() => {
+    if (!isOpen) return;
+
     if (product) {
       setFormData({
         name: product.name,
         description: product.description || "",
         price: String(product.price),
-        comparePrice: String(product.comparePrice || ""),
+        comparePrice: product.comparePrice ? String(product.comparePrice) : "",
         stock: String(product.stock),
-        installments: String(product.installments || ""),
+        installments: product.installments ? String(product.installments) : "",
         categoryId: product.categoryId || "",
         isActive: product.isActive,
       });
-      setImages(product.images || []);
+      setImages(
+        (product.images ?? []).map((url, index) => ({
+          id: `existing-${index}-${url}`,
+          url,
+        })),
+      );
     } else {
-      setFormData({
-        name: "",
-        description: "",
-        price: "",
-        comparePrice: "",
-        stock: "",
-        installments: "",
-        categoryId: "",
-        isActive: true,
-      });
+      setFormData(emptyForm);
       setImages([]);
-      setImageFiles([]);
     }
-  }, [product]);
 
-  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+    setError("");
+    setShowCategoryForm(false);
+    setNewCategoryName("");
+  }, [isOpen, product]);
+
+  if (!isOpen) return null;
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     if (!token) return;
 
     setIsSubmitting(true);
     setError("");
 
     try {
-      const uploadedImages = await uploadImages();
-      const allImages = [...images.filter((i) => !i.startsWith("blob:")), ...uploadedImages];
+      const newFiles = images
+        .filter((image): image is ImageItem & { file: File } => Boolean(image.file))
+        .map((image) => image.file);
+
+      const uploadedUrls = newFiles.length
+        ? (await api.uploadImages(token, newFiles)).urls
+        : [];
+
+      let uploadedIndex = 0;
+      const finalImages = images.map((image) =>
+        image.file ? uploadedUrls[uploadedIndex++] : image.url,
+      );
 
       const payload = {
-        name: formData.name,
-        description: formData.description || undefined,
+        name: formData.name.trim(),
+        description: formData.description.trim() || undefined,
         price: Number(formData.price),
-        comparePrice: formData.comparePrice ? Number(formData.comparePrice) : undefined,
-        stock: Number(formData.stock),
-        installments: formData.installments ? Number(formData.installments) : undefined,
-        categoryId: formData.categoryId || undefined,
+        comparePrice: formData.comparePrice
+          ? Number(formData.comparePrice)
+          : undefined,
+        stock: Number(formData.stock || 0),
+        installments: formData.installments
+          ? Number(formData.installments)
+          : undefined,
+        categoryId: formData.categoryId || null,
         isActive: formData.isActive,
-        images: allImages,
+        images: finalImages,
       };
 
       if (product) {
@@ -98,59 +136,101 @@ export function ProductFormDialog({ isOpen, onClose, onSuccess, product }: Produ
 
       onSuccess();
       onClose();
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Erro ao salvar produto");
+    } catch (requestError) {
+      setError(
+        requestError instanceof ApiError
+          ? requestError.message
+          : "Não foi possível salvar o produto. Tente novamente.",
+      );
     } finally {
       setIsSubmitting(false);
     }
   }
 
-  async function uploadImages() {
-    if (!token || imageFiles.length === 0) return [];
-    const formData = new FormData();
-    imageFiles.forEach((file) => formData.append("file", file));
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api/v1"}/uploads/image`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData,
-    });
-    if (!res.ok) throw new Error("Erro no upload");
-    const data = await res.json();
-    return [data.url];
-  }
+  function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files || []);
+    event.target.value = "";
 
-  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files || []);
-    setImageFiles((prev) => [...prev, ...files]);
-    files.forEach((file) => {
-      const url = URL.createObjectURL(file);
-      setImages((prev) => [...prev, url]);
-    });
-  }
-
-  function removeImage(index: number) {
-    const img = images[index];
-    if (img.startsWith("blob:")) {
-      setImageFiles((prev) => prev.filter((_, i) => i !== index));
+    const invalid = files.find(
+      (file) => !file.type.startsWith("image/") || file.size > MAX_IMAGE_SIZE,
+    );
+    if (invalid) {
+      setError("Envie apenas imagens de até 5MB cada.");
+      return;
     }
-    setImages((prev) => prev.filter((_, i) => i !== index));
+
+    const nextImages = files.map((file) => ({
+      id: `${Date.now()}-${file.name}-${Math.random().toString(36).slice(2)}`,
+      url: URL.createObjectURL(file),
+      file,
+    }));
+
+    setImages((current) => [...current, ...nextImages].slice(0, 20));
+    setError("");
   }
 
-  if (!isOpen) return null;
+  function removeImage(image: ImageItem) {
+    if (image.url.startsWith("blob:")) URL.revokeObjectURL(image.url);
+    setImages((current) => current.filter((item) => item.id !== image.id));
+  }
+
+  async function createCategory() {
+    const name = newCategoryName.trim();
+    if (!token || name.length < 2) return;
+
+    setIsCreatingCategory(true);
+    setError("");
+    try {
+      const category = await api.createCategory(token, { name });
+      setCategories((current) =>
+        [...current, category].sort((a, b) => a.name.localeCompare(b.name)),
+      );
+      setFormData((current) => ({ ...current, categoryId: category.id }));
+      setNewCategoryName("");
+      setShowCategoryForm(false);
+    } catch (requestError) {
+      setError(
+        requestError instanceof ApiError
+          ? requestError.message
+          : "Não foi possível criar a categoria.",
+      );
+    } finally {
+      setIsCreatingCategory(false);
+    }
+  }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-text-title/35 backdrop-blur p-4" onClick={onClose}>
-      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="sticky top-0 flex items-center justify-between border-b border-primary/10 bg-white/95 backdrop-blur px-5 py-4 rounded-t-2xl">
-          <h2 className="font-display text-xl font-bold">{product ? "Editar produto" : "Novo produto"}</h2>
-          <button onClick={onClose} className="grid h-10 w-10 place-items-center rounded-full text-text-secondary hover:bg-primary-light hover:text-primary">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-text-title/35 p-4 backdrop-blur"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="product-form-title"
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="sticky top-0 flex items-center justify-between rounded-t-2xl border-b border-primary/10 bg-white/95 px-5 py-4 backdrop-blur">
+          <h2 id="product-form-title" className="font-display text-xl font-bold">
+            {product ? "Editar produto" : "Novo produto"}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid h-10 w-10 place-items-center rounded-full text-text-secondary hover:bg-primary-light hover:text-primary"
+            aria-label="Fechar"
+          >
             <X size={20} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-5 p-5">
           {error && (
-            <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700" role="alert">
+            <p
+              className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700"
+              role="alert"
+            >
               {error}
             </p>
           )}
@@ -160,8 +240,11 @@ export function ProductFormDialog({ isOpen, onClose, onSuccess, product }: Produ
               <span className="field-label">Nome *</span>
               <input
                 required
+                maxLength={160}
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(event) =>
+                  setFormData({ ...formData, name: event.target.value })
+                }
                 className="field"
                 placeholder="Nome do produto"
               />
@@ -171,8 +254,11 @@ export function ProductFormDialog({ isOpen, onClose, onSuccess, product }: Produ
               <span className="field-label">Descrição</span>
               <textarea
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(event) =>
+                  setFormData({ ...formData, description: event.target.value })
+                }
                 rows={3}
+                maxLength={5000}
                 className="field resize-none"
                 placeholder="Descreva o produto..."
               />
@@ -186,7 +272,9 @@ export function ProductFormDialog({ isOpen, onClose, onSuccess, product }: Produ
                 min="0"
                 required
                 value={formData.price}
-                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                onChange={(event) =>
+                  setFormData({ ...formData, price: event.target.value })
+                }
                 className="field"
                 placeholder="0,00"
               />
@@ -199,7 +287,9 @@ export function ProductFormDialog({ isOpen, onClose, onSuccess, product }: Produ
                 step="0.01"
                 min="0"
                 value={formData.comparePrice}
-                onChange={(e) => setFormData({ ...formData, comparePrice: e.target.value })}
+                onChange={(event) =>
+                  setFormData({ ...formData, comparePrice: event.target.value })
+                }
                 className="field"
                 placeholder="Preço original (opcional)"
               />
@@ -212,7 +302,9 @@ export function ProductFormDialog({ isOpen, onClose, onSuccess, product }: Produ
                 min="0"
                 required
                 value={formData.stock}
-                onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                onChange={(event) =>
+                  setFormData({ ...formData, stock: event.target.value })
+                }
                 className="field"
                 placeholder="0"
               />
@@ -223,37 +315,102 @@ export function ProductFormDialog({ isOpen, onClose, onSuccess, product }: Produ
               <input
                 type="number"
                 min="1"
-                max="12"
+                max="120"
                 value={formData.installments}
-                onChange={(e) => setFormData({ ...formData, installments: e.target.value })}
+                onChange={(event) =>
+                  setFormData({ ...formData, installments: event.target.value })
+                }
                 className="field"
                 placeholder="1"
               />
             </label>
 
-            <label className="sm:col-span-2">
+            <div className="sm:col-span-2">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <span className="text-sm font-bold text-text-title">Categoria</span>
+                <div className="flex items-center gap-3 text-xs font-bold">
+                  <Link
+                    href="/painel/categorias"
+                    className="text-text-secondary hover:text-primary"
+                  >
+                    Gerenciar
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setShowCategoryForm((value) => !value)}
+                    className="inline-flex items-center gap-1 text-primary hover:underline"
+                  >
+                    <Plus size={13} /> Nova
+                  </button>
+                </div>
+              </div>
+              <select
+                value={formData.categoryId}
+                onChange={(event) =>
+                  setFormData({ ...formData, categoryId: event.target.value })
+                }
+                className="field"
+              >
+                <option value="">Sem categoria</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+
+              {showCategoryForm && (
+                <div className="mt-3 flex gap-2">
+                  <input
+                    value={newCategoryName}
+                    onChange={(event) => setNewCategoryName(event.target.value)}
+                    className="field"
+                    placeholder="Nome da nova categoria"
+                    maxLength={80}
+                  />
+                  <button
+                    type="button"
+                    onClick={createCategory}
+                    disabled={isCreatingCategory || newCategoryName.trim().length < 2}
+                    className="btn-secondary shrink-0 !px-4"
+                  >
+                    {isCreatingCategory ? (
+                      <LoaderCircle size={16} className="animate-spin" />
+                    ) : (
+                      "Criar"
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="sm:col-span-2">
               <span className="field-label">Imagens</span>
               <div className="grid gap-3 sm:grid-cols-4">
-                {images.map((image, index) => (
-                  <div key={index} className="relative aspect-square rounded-xl overflow-hidden bg-primary/5">
+                {images.map((image) => (
+                  <div
+                    key={image.id}
+                    className="relative aspect-square overflow-hidden rounded-xl bg-primary/5"
+                  >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={image} alt="" className="h-full w-full object-cover" />
+                    <img src={image.url} alt="" className="h-full w-full object-cover" />
                     <button
                       type="button"
-                      onClick={() => removeImage(index)}
+                      onClick={() => removeImage(image)}
                       className="absolute right-1 top-1 grid h-7 w-7 place-items-center rounded-full bg-red-500 text-white hover:bg-red-600"
+                      aria-label="Remover imagem"
                     >
                       <Trash2 size={14} />
                     </button>
                   </div>
                 ))}
-                <label className="relative aspect-square rounded-xl border-2 border-dashed border-primary/20 bg-white cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition">
+                <label className="relative aspect-square cursor-pointer rounded-xl border-2 border-dashed border-primary/20 bg-white transition hover:border-primary/40 hover:bg-primary/5">
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
                     multiple
                     onChange={handleImageChange}
-                    className="absolute inset-0 opacity-0 cursor-pointer"
+                    className="absolute inset-0 cursor-pointer opacity-0"
                   />
                   <div className="flex h-full flex-col items-center justify-center gap-2 text-primary">
                     <ImagePlus size={28} />
@@ -261,40 +418,35 @@ export function ProductFormDialog({ isOpen, onClose, onSuccess, product }: Produ
                   </div>
                 </label>
               </div>
-              <p className="mt-2 text-xs text-text-secondary">Clique ou arraste para adicionar imagens (máx. 5MB cada)</p>
-            </label>
-
-            <label className="sm:col-span-2">
-              <span className="field-label">Categoria</span>
-              <select
-                value={formData.categoryId}
-                onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-                className="field"
-              >
-                <option value="">Selecione uma categoria</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>{cat.name}</option>
-                ))}
-              </select>
-            </label>
+              <p className="mt-2 text-xs text-text-secondary">
+                Até 20 imagens, 5MB cada. A primeira aparece como capa.
+              </p>
+            </div>
 
             <label className="flex items-center gap-3 sm:col-span-2">
               <input
                 type="checkbox"
                 checked={formData.isActive}
-                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                onChange={(event) =>
+                  setFormData({ ...formData, isActive: event.target.checked })
+                }
                 className="h-4 w-4 rounded border-primary/30 text-primary focus:ring-primary"
               />
               <span className="font-bold text-text-title">Produto ativo</span>
             </label>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-primary/10">
-            <button type="button" onClick={onClose} disabled={isSubmitting} className="btn-secondary">
+          <div className="flex justify-end gap-3 border-t border-primary/10 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="btn-secondary"
+            >
               Cancelar
             </button>
             <button type="submit" disabled={isSubmitting} className="btn-primary">
-              {isSubmitting ? <LoaderCircle size={18} className="animate-spin mr-2" /> : null}
+              {isSubmitting && <LoaderCircle size={18} className="animate-spin" />}
               {product ? "Salvar alterações" : "Criar produto"}
             </button>
           </div>
