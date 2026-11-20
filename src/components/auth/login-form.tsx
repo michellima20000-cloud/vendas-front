@@ -25,8 +25,9 @@ export function LoginForm() {
       router.push("/painel");
       router.refresh();
     } catch (requestError) {
+      console.error("[auth] falha ao entrar", requestError);
       setError(
-        requestError instanceof ApiError
+        requestError instanceof ApiError || requestError instanceof Error
           ? requestError.message
           : "Não foi possível entrar. Verifique sua conexão.",
       );

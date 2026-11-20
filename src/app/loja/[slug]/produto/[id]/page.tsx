@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, PackageCheck, ShieldCheck } from "lucide-react";
-import { api } from "@/lib/api";
+import { catalog } from "@/lib/catalog";
 import { formatCurrency } from "@/lib/format";
 import { StoreHeader } from "@/components/store/store-header";
 import { StoreFooter } from "@/components/store/store-footer";
@@ -15,7 +15,7 @@ interface ProductPageProps {
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const { id } = await params;
   try {
-    const product = await api.getProduct(id);
+    const product = await catalog.getProduct(id);
     return { title: product.name, description: product.description || undefined };
   } catch {
     return { title: "Produto não encontrado" };
@@ -27,7 +27,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
   let store;
   let product;
   try {
-    [store, product] = await Promise.all([api.getStore(slug), api.getProduct(id)]);
+    [store, product] = await Promise.all([catalog.getStore(slug), catalog.getProduct(id)]);
   } catch {
     notFound();
   }

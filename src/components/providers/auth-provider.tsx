@@ -52,8 +52,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const persistSession = useCallback((accessToken: string, nextUser: User) => {
-    window.localStorage.setItem(TOKEN_KEY, accessToken);
-    window.localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
+    try {
+      window.localStorage.setItem(TOKEN_KEY, accessToken);
+      window.localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
+    } catch {
+      throw new Error(
+        "Seu navegador bloqueou o armazenamento local. Permita o acesso aos dados do site e tente novamente.",
+      );
+    }
     setToken(accessToken);
     setUser(nextUser);
   }, []);
@@ -77,8 +83,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(() => {
-    window.localStorage.removeItem(TOKEN_KEY);
-    window.localStorage.removeItem(USER_KEY);
+    try {
+      window.localStorage.removeItem(TOKEN_KEY);
+      window.localStorage.removeItem(USER_KEY);
+    } catch {
+      // Mesmo sem acesso ao storage, o estado local deve ser encerrado.
+    }
     setToken(null);
     setUser(null);
   }, []);

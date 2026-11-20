@@ -8,7 +8,7 @@ import {
   ShoppingBag,
   Sparkles,
 } from "lucide-react";
-import { api } from "@/lib/api";
+import { catalog } from "@/lib/catalog";
 import { whatsappUrl } from "@/lib/format";
 import { StoreHeader } from "@/components/store/store-header";
 import { StoreFooter } from "@/components/store/store-footer";
@@ -29,7 +29,7 @@ const stepIcons = {
 export async function generateMetadata({ params }: StorePageProps): Promise<Metadata> {
   const { slug } = await params;
   try {
-    const store = await api.getStore(slug);
+    const store = await catalog.getStore(slug);
     return {
       title: store.name,
       description: store.description || `Conheça a loja ${store.name}.`,
@@ -46,18 +46,18 @@ export default async function StorePage({ params, searchParams }: StorePageProps
 
   let store;
   try {
-    store = await api.getStore(slug);
+    store = await catalog.getStore(slug);
   } catch {
     notFound();
   }
 
-  const productResult = await api.getProducts(slug, {
+  const productResult = await catalog.getProducts(slug, {
     page,
     limit: 12,
     category: filters.category,
     search: filters.search,
   });
-  const categories = store.categories ?? (await api.getCategories(slug));
+  const categories = store.categories ?? (await catalog.getCategories(slug));
   const theme = store.theme;
   const style = theme
     ? {

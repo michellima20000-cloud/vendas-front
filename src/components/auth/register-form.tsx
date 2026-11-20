@@ -35,8 +35,9 @@ export function RegisterForm() {
       router.push("/painel/loja");
       router.refresh();
     } catch (requestError) {
+      console.error("[auth] falha ao cadastrar", requestError);
       setError(
-        requestError instanceof ApiError
+        requestError instanceof ApiError || requestError instanceof Error
           ? requestError.message
           : "Não foi possível criar sua conta. Tente novamente.",
       );

@@ -9,9 +9,45 @@ import type {
   User,
 } from "@/types/api";
 
-export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ??
-  "http://localhost:3001/api/v1";
+export const FALLBACK_API_URL = "https://vendas-black.onrender.com/api/v1";
+
+const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
+
+function isLoopback(url: string): boolean {
+  return /\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(:|\/|$)/i.test(url);
+}
+
+/**
+ * Descobre a URL da API.
+ *
+ * Protege contra o erro mais comum de deploy: build feito com
+ * NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1 e site publicado. Nesse
+ * caso o navegador do visitante tentaria o próprio localhost e nada
+ * funcionaria. Fora de um contexto local, cai na API pública.
+ */
+function resolveApiUrl(): string {
+  if (!configuredApiUrl) return FALLBACK_API_URL;
+  if (!isLoopback(configuredApiUrl)) return configuredApiUrl;
+
+  // No servidor (SSR/Server Components) de um build de produção.
+  if (typeof window === "undefined") {
+    return process.env.NODE_ENV === "production"
+      ? FALLBACK_API_URL
+      : configuredApiUrl;
+  }
+
+  // No navegador: só usa localhost se a própria página também for local.
+  const pageHost = window.location.hostname;
+  const pageIsLocal =
+    pageHost === "localhost" ||
+    pageHost === "127.0.0.1" ||
+    pageHost === "[::1]" ||
+    pageHost.endsWith(".localhost");
+
+  return pageIsLocal ? configuredApiUrl : FALLBACK_API_URL;
+}
+
+export const API_URL = resolveApiUrl();
 
 export class ApiError extends Error {
   status: number;
@@ -32,23 +68,36 @@ function getErrorMessage(payload: unknown, fallback: string): string {
   return body.message || body.error || fallback;
 }
 
+type ApiRequestOptions = RequestInit & { token?: string; baseUrl?: string };
+
 export async function apiRequest<T>(
   path: string,
-  options: RequestInit & { token?: string } = {},
+  options: ApiRequestOptions = {},
 ): Promise<T> {
-  const { token, headers, ...requestOptions } = options;
-  const response = await fetch(`${API_URL}${path}`, {
-    ...requestOptions,
-    headers: {
-      Accept: "application/json",
-      ...(requestOptions.body instanceof FormData
-        ? {}
-        : { "Content-Type": "application/json" }),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...headers,
-    },
-    cache: requestOptions.cache ?? "no-store",
-  });
+  const { token, headers, baseUrl = API_URL, ...requestOptions } = options;
+  const requestUrl = /^https?:\/\//i.test(path) ? path : `${baseUrl}${path}`;
+  let response: Response;
+  try {
+    response = await fetch(requestUrl, {
+      ...requestOptions,
+      headers: {
+        Accept: "application/json",
+        ...(requestOptions.body instanceof FormData
+          ? {}
+          : { "Content-Type": "application/json" }),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...headers,
+      },
+      cache: requestOptions.cache ?? "no-store",
+    });
+  } catch (error) {
+    console.error(`[api] falha de rede em ${requestUrl}`, error);
+    throw new ApiError(
+      "Não conseguimos conectar ao servidor. Verifique sua conexão e tente novamente em instantes.",
+      0,
+      error,
+    );
+  }
 
   const contentType = response.headers.get("content-type") ?? "";
   const payload = contentType.includes("application/json")
@@ -64,6 +113,19 @@ export async function apiRequest<T>(
   }
 
   return payload as T;
+}
+
+/**
+ * Faz uma requisição à própria aplicação Next.js.
+ *
+ * O proxy interno é usado na autenticação para evitar problemas de CORS e
+ * impedir que o navegador tente acessar `localhost` em um site publicado.
+ */
+export function sameOriginRequest<T>(
+  path: string,
+  options: Omit<ApiRequestOptions, "baseUrl"> = {},
+): Promise<T> {
+  return apiRequest<T>(path, { ...options, baseUrl: "" });
 }
 
 export const api = {
@@ -94,12 +156,12 @@ export const api = {
       token,
     }),
   login: (email: string, password: string) =>
-    apiRequest<AuthResponse>("/auth/login", {
+    sameOriginRequest<AuthResponse>("/api/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
     }),
   register: (name: string, email: string, password: string) =>
-    apiRequest<AuthResponse>("/auth/register", {
+    sameOriginRequest<AuthResponse>("/api/auth/register", {
       method: "POST",
       body: JSON.stringify({ name, email, password }),
     }),

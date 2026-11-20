@@ -11,28 +11,30 @@
     "api:generate": "openapi-typescript http://localhost:3001/api/v1/docs-json -o src/types/api.d.ts"
   },
   "dependencies": {
+    "@hookform/resolvers": "^3.3.4",
+    "@upstash/redis": "^1.41.0",
+    "axios": "^1.6.7",
+    "clsx": "^2.1.0",
+    "lucide-react": "^1.76.0",
     "next": "15.5.29",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "axios": "^1.6.7",
-    "lucide-react": "^1.76.0",
-    "clsx": "^2.1.0",
-    "tailwind-merge": "^2.2.1",
-    "swr": "^2.2.4",
-    "@hookform/resolvers": "^3.3.4",
     "react-hook-form": "^7.50.1",
+    "server-only": "^0.0.1",
+    "swr": "^2.2.4",
+    "tailwind-merge": "^2.2.1",
     "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "typescript": "^5",
-    "tailwindcss": "^3.4.1",
-    "postcss": "^8",
     "autoprefixer": "^10.0.1",
     "eslint": "^8",
     "eslint-config-next": "15.5.29",
-    "openapi-typescript": "^6.7.3"
+    "openapi-typescript": "^6.7.3",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
   }
 }

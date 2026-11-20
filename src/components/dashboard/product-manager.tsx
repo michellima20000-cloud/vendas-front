@@ -43,7 +43,7 @@ export function ProductManager() {
   }, [token]);
 
   async function remove(product: Product) {
-    if (!token || !window.confirm(`Remover â€œ${product.name}â€ do catÃ¡logo?`)) return;
+    if (!token || !window.confirm(`Remover “${product.name}” do catálogo?`)) return;
     try {
       await api.deleteProduct(token, product.id);
       await load();
@@ -88,12 +88,12 @@ export function ProductManager() {
             <Package size={30} />
           </span>
           <h2 className="mt-5 font-display text-2xl font-bold text-text-title">
-            {search ? "Nenhum produto encontrado" : "Seu catÃ¡logo estÃ¡ vazio"}
+            {search ? "Nenhum produto encontrado" : "Seu catálogo está vazio"}
           </h2>
           <p className="mx-auto mt-2 max-w-md text-sm text-text-secondary">
             {search
               ? "Tente buscar por outro nome."
-              : "Cadastre seu primeiro produto para comeÃ§ar a vender."}
+              : "Cadastre seu primeiro produto para começar a vender."}
           </p>
           {!search && (
             <button type="button" onClick={() => setEditing(null)} className="btn-primary mt-6">
@@ -108,10 +108,10 @@ export function ProductManager() {
               <thead className="border-b border-primary/10 bg-primary-light/40 text-xs uppercase tracking-wider text-text-secondary">
                 <tr>
                   <th className="px-5 py-4 font-black">Produto</th>
-                  <th className="px-5 py-4 font-black">PreÃ§o</th>
+                  <th className="px-5 py-4 font-black">Preço</th>
                   <th className="px-5 py-4 font-black">Estoque</th>
                   <th className="px-5 py-4 font-black">Status</th>
-                  <th className="px-5 py-4 text-right font-black">AÃ§Ãµes</th>
+                  <th className="px-5 py-4 text-right font-black">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-primary/10">
@@ -132,7 +132,7 @@ export function ProductManager() {
                         <div>
                           <p className="text-sm font-bold text-text-title">{product.name}</p>
                           <p className="mt-0.5 max-w-xs truncate text-xs text-text-secondary">
-                            {product.description || "Sem descriÃ§Ã£o"}
+                            {product.description || "Sem descrição"}
                           </p>
                         </div>
                       </div>
