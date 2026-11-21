@@ -61,6 +61,17 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Erro que significa "este usuário ainda não tem loja".
+ *
+ * 404 = não existe loja para o dono; 403 = o papel atual não é lojista
+ * (cliente recém-cadastrado). Nos dois casos o painel deve oferecer a criação
+ * da loja em vez de exibir a mensagem crua da API.
+ */
+export function isMissingStoreError(error: unknown): boolean {
+  return error instanceof ApiError && (error.status === 404 || error.status === 403);
+}
+
 function getErrorMessage(payload: unknown, fallback: string): string {
   if (!payload || typeof payload !== "object") return fallback;
   const body = payload as { message?: string | string[]; error?: string };

@@ -119,3 +119,22 @@ select:focus-visible {
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
   animation: shimmer 1.5s infinite;
 }
+
+/*
+ * Vitrine da loja (/loja/[slug]).
+ *
+ * A página define --store-font-title e --store-font-body com as fontes
+ * escolhidas no painel; sem essas variáveis o site cai nas fontes padrão.
+ */
+.store-theme {
+  font-family: var(--store-font-body, var(--font-nunito));
+}
+
+.store-theme h1,
+.store-theme h2,
+.store-theme h3,
+.store-theme h4,
+.store-theme .font-display,
+.store-theme .section-title {
+  font-family: var(--store-font-title, var(--font-playfair));
+}

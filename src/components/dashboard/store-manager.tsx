@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { ExternalLink, LoaderCircle, Save, Store } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, isMissingStoreError } from "@/lib/api";
 import { slugify } from "@/lib/format";
 import type { Store as StoreType } from "@/types/api";
 
@@ -23,7 +23,7 @@ export function StoreManager() {
       .myStore(token)
       .then(setStore)
       .catch((requestError) => {
-        if (!(requestError instanceof ApiError) || requestError.status !== 404) {
+        if (!isMissingStoreError(requestError)) {
           setError(requestError instanceof Error ? requestError.message : "Erro ao carregar a loja");
         }
       })

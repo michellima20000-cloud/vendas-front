@@ -9,6 +9,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { catalog } from "@/lib/catalog";
+import { fontStack, googleFontsHref } from "@/lib/fonts";
 import { whatsappUrl } from "@/lib/format";
 import { StoreHeader } from "@/components/store/store-header";
 import { StoreFooter } from "@/components/store/store-footer";
@@ -59,16 +60,25 @@ export default async function StorePage({ params, searchParams }: StorePageProps
   });
   const categories = store.categories ?? (await catalog.getCategories(slug));
   const theme = store.theme;
-  const style = theme
-    ? {
-        "--store-primary": theme.primaryColor,
-        "--store-accent": theme.accentColor,
-        "--store-bg": theme.bgColor,
-      } as React.CSSProperties
-    : undefined;
+  const titleStack = fontStack(theme?.fontTitle, "Georgia, serif");
+  const bodyStack = fontStack(theme?.fontBody, '"Segoe UI", Arial, sans-serif');
+  const fontsHref = googleFontsHref([theme?.fontTitle, theme?.fontBody]);
+  const style = {
+    ...(theme
+      ? {
+          "--store-primary": theme.primaryColor,
+          "--store-accent": theme.accentColor,
+          "--store-bg": theme.bgColor,
+        }
+      : {}),
+    ...(titleStack ? { "--store-font-title": titleStack } : {}),
+    ...(bodyStack ? { "--store-font-body": bodyStack } : {}),
+  } as React.CSSProperties;
+  const wrapperStyle = Object.keys(style).length > 0 ? style : undefined;
 
   return (
-    <div style={style} className="min-h-screen bg-[var(--store-bg,#fffafb)]">
+    <div style={wrapperStyle} className="store-theme min-h-screen bg-[var(--store-bg,#fffafb)]">
+      {fontsHref && <link rel="stylesheet" href={fontsHref} />}
       <StoreHeader store={store} />
 
       <main>

@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   Edit3,
   ImagePlus,
@@ -11,7 +12,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
-import { api } from "@/lib/api";
+import { api, isMissingStoreError } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { ProductFormDialog } from "@/components/dashboard/product-form-dialog";
 import type { Paginated, Product } from "@/types/api";
@@ -21,6 +22,7 @@ export function ProductManager() {
   const [result, setResult] = useState<Paginated<Product> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [missingStore, setMissingStore] = useState(false);
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<Product | null | undefined>(undefined);
 
@@ -30,8 +32,13 @@ export function ProductManager() {
     setError("");
     try {
       setResult(await api.getMyProducts(token, 1, 100));
+      setMissingStore(false);
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Erro ao carregar produtos");
+      if (isMissingStoreError(requestError)) {
+        setMissingStore(true);
+      } else {
+        setError(requestError instanceof Error ? requestError.message : "Erro ao carregar produtos");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -55,6 +62,25 @@ export function ProductManager() {
   const products = (result?.data ?? []).filter((product) =>
     product.name.toLowerCase().includes(search.toLowerCase()),
   );
+
+  if (missingStore) {
+    return (
+      <div className="rounded-[2rem] border border-dashed border-primary/20 bg-white p-12 text-center">
+        <span className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-primary-light text-primary">
+          <Package size={30} />
+        </span>
+        <h2 className="mt-5 font-display text-2xl font-bold text-text-title">
+          Você ainda não tem uma loja
+        </h2>
+        <p className="mx-auto mt-2 max-w-md text-sm text-text-secondary">
+          Crie sua loja para cadastrar produtos e começar a vender.
+        </p>
+        <Link href="/painel/loja" className="btn-primary mt-6">
+          Criar minha loja
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <>

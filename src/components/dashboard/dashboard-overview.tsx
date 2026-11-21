@@ -12,7 +12,7 @@ import {
   Store,
 } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
-import { api } from "@/lib/api";
+import { api, isMissingStoreError } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/format";
 import type { Order, Paginated, Product, Store as StoreType } from "@/types/api";
 
@@ -46,7 +46,7 @@ export function DashboardOverview() {
         setOrders(orderResult);
         setProducts(productResult);
       } catch (requestError) {
-        if (requestError instanceof Error && "status" in requestError && requestError.status === 404) {
+        if (isMissingStoreError(requestError)) {
           setStore(null);
         } else {
           setError(requestError instanceof Error ? requestError.message : "Erro ao carregar o painel");

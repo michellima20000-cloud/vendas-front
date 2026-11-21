@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { LoaderCircle, PackageCheck, ShoppingBag } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
-import { api } from "@/lib/api";
+import { api, isMissingStoreError } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/format";
 import type { Order, OrderStatus, Paginated } from "@/types/api";
 
@@ -28,6 +29,7 @@ export function OrdersManager() {
   const [result, setResult] = useState<Paginated<Order> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [missingStore, setMissingStore] = useState(false);
 
   async function load() {
     if (!token) return;
@@ -35,8 +37,13 @@ export function OrdersManager() {
     setError("");
     try {
       setResult(await api.getStoreOrders(token, 1, 100));
+      setMissingStore(false);
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Erro ao carregar pedidos");
+      if (isMissingStoreError(requestError)) {
+        setMissingStore(true);
+      } else {
+        setError(requestError instanceof Error ? requestError.message : "Erro ao carregar pedidos");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -66,6 +73,25 @@ export function OrdersManager() {
   }
 
   if (isLoading) return <LoaderCircle className="animate-spin text-primary" size={28} />;
+
+  if (missingStore) {
+    return (
+      <div className="rounded-[2rem] border border-dashed border-primary/20 bg-white p-12 text-center">
+        <span className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-primary-light text-primary">
+          <ShoppingBag size={30} />
+        </span>
+        <h2 className="mt-5 font-display text-2xl font-bold text-text-title">
+          Você ainda não tem uma loja
+        </h2>
+        <p className="mx-auto mt-2 max-w-md text-sm text-text-secondary">
+          Crie sua loja para acompanhar os pedidos da sua vitrine.
+        </p>
+        <Link href="/painel/loja" className="btn-primary mt-6">
+          Criar minha loja
+        </Link>
+      </div>
+    );
+  }
 
   if (!result?.data.length) {
     return (

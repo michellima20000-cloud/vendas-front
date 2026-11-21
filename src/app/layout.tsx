@@ -3,6 +3,10 @@ import "./globals.css";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import { CartProvider } from "@/components/providers/cart-provider";
 import { CartDrawer } from "@/components/store/cart-drawer";
+import { googleFontsHref } from "@/lib/fonts";
+
+// Fontes padrão do site (títulos e corpo), carregadas do Google Fonts.
+const defaultFontsHref = googleFontsHref(["Playfair Display", "Nunito"]);
 
 export const metadata: Metadata = {
   title: {
@@ -17,6 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pt-BR">
       <body>
+        {defaultFontsHref && <link rel="stylesheet" href={defaultFontsHref} />}
         <AuthProvider>
           <CartProvider>
             {children}
