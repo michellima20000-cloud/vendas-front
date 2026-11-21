@@ -100,7 +100,7 @@ export function StoreManager() {
             <span className="field-label">Endereço da loja</span>
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-text-secondary">/loja/</span>
-              <input name="slug" required defaultValue={store?.slug} className="field !pl-[4.6rem]" placeholder="atelie-bella" pattern="[a-z0-9-]+" />
+              <input name="slug" required defaultValue={store?.slug} className="field !pl-[4.6rem]" placeholder="atelie-bella" pattern="[a-z0-9\-]+" title="Use apenas letras minúsculas, números e hífen" />
             </div>
           </label>
           <label className="sm:col-span-2">

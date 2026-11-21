@@ -103,9 +103,20 @@ export function ProductFormDialog({
         .filter((image): image is ImageItem & { file: File } => Boolean(image.file))
         .map((image) => image.file);
 
-      const uploadedUrls = newFiles.length
-        ? (await api.uploadImages(token, newFiles)).urls
-        : [];
+      let uploadedUrls: string[] = [];
+      if (newFiles.length) {
+        try {
+          uploadedUrls = (await api.uploadImages(token, newFiles)).urls;
+        } catch (uploadError) {
+          // Falha só no upload não deve apagar o que o usuário já preencheu.
+          throw new ApiError(
+            uploadError instanceof ApiError
+              ? uploadError.message
+              : "Não foi possível enviar a imagem. Tente novamente ou salve o produto sem imagem.",
+            uploadError instanceof ApiError ? uploadError.status : 0,
+          );
+        }
+      }
 
       let uploadedIndex = 0;
       const finalImages = images.map((image) =>
