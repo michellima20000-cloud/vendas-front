@@ -190,7 +190,7 @@ export function ThemeEditor() {
             className="mt-3 max-w-md text-sm opacity-75"
             style={{ fontFamily: fontStack(theme.fontBody, '"Segoe UI", Arial, sans-serif') }}
           >
-            Así fica a combinação de cores e fontes aplicada à sua vitrine.
+            Assim fica a combinação de cores e fontes aplicada à sua vitrine.
           </p>
           <button
             type="button"
