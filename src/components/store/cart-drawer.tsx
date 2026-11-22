@@ -52,16 +52,22 @@ export function CartDrawer() {
     setError("");
 
     const form = new FormData(event.currentTarget);
-    const address = {
-      street: String(form.get("street") || ""),
-      number: String(form.get("number") || ""),
-      complement: String(form.get("complement") || ""),
-      district: String(form.get("district") || ""),
-      city: String(form.get("city") || ""),
-      state: String(form.get("state") || ""),
-      zipCode: String(form.get("zipCode") || ""),
+    const value = (key: string) => {
+      const raw = form.get(key);
+      const text = typeof raw === "string" ? raw.trim() : "";
+      // Campos opcionais: "" vira undefined para a API tratar como "não informado".
+      return text === "" ? undefined : text;
     };
-    const notes = String(form.get("notes") || "");
+    const address = {
+      street: value("street") ?? "",
+      number: value("number") ?? "",
+      complement: value("complement"),
+      district: value("district") ?? "",
+      city: value("city") ?? "",
+      state: value("state") ?? "",
+      zipCode: value("zipCode") ?? "",
+    };
+    const notes = value("notes");
 
     try {
       const order = await api.createOrder({
